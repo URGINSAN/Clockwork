@@ -16,16 +16,53 @@ public class GetTime : MonoBehaviour
     private string TimerUrl1 = "https://timeapi.io/api/time/current/zone?timeZone=Europe%2FMoscow";
     private string TimerUrl2 = "https://api.ipgeolocation.io/timezone?apiKey=bd87746bbd9c44079b65d861720fe42b&tz=Europe/Moscow";
     [Space]
-    public TimeParseUrl1 Time1;
-    public TimeParseUrl2 Time2;
+    [SerializeField] private TimeParseUrl1 Time1;
+    [SerializeField] private TimeParseUrl2 Time2;
     [Space]
-    public int Hours;
-    public int Minutes;
-    public int Seconds;
+    private bool TimeGetted;
+    private bool canUpdateUI = true;
+    private float addSecondTimer = 0;
+    public DateTime TimeCurrent;
+    [SerializeField] private DateTime TimeToCheck;
+    [SerializeField] private int Hours;
+    [SerializeField] private int Minutes;
+    [SerializeField] private int Seconds;
+
+    public static GetTime instance;
+
+    private void Awake()
+    {
+        if (instance == null)
+            instance = this;
+    }
 
     private void Start()
     {
         ActualTime();
+    }
+
+    private void Update()
+    {
+        if (TimeGetted)
+        {
+            if (TimeCurrent > TimeToCheck)
+            {
+                //TimeGetted = false;
+                ActualTime();
+            }
+
+            addSecondTimer += Time.deltaTime;
+
+            if (addSecondTimer > 1)
+            {
+                TimeCurrent = TimeCurrent.AddSeconds(1);
+
+                if (canUpdateUI)
+                    UIController.instance.UpdateTime(TimeCurrent.Hour, TimeCurrent.Minute, TimeCurrent.Second);
+
+                addSecondTimer = 0;
+            }
+        }
     }
 
     #region api 1
@@ -47,6 +84,7 @@ public class GetTime : MonoBehaviour
             Minutes = Time1.minute;
             Seconds = Time1.seconds;
 
+            SetDateTime(Time1.year, Time1.month, Time1.day, Time1.hour, Time1.minute, Time1.seconds);
             UIController.instance.UpdateTime(Hours, Minutes, Seconds);
         }
     }
@@ -78,6 +116,7 @@ public class GetTime : MonoBehaviour
             Minutes = int.Parse(time[1]);
             Seconds = int.Parse(time[2]);
 
+            SetDateTime(Time2.date_time);
             UIController.instance.UpdateTime(Hours, Minutes, Seconds);
         }
     }
@@ -96,13 +135,44 @@ public class GetTime : MonoBehaviour
 
         if (type == Type.TimeApi2)
             StartCoroutine(GetRealDateTimeFromAPI2());
+    }
 
-        IEnumerator IE()
+    void SetDateTime(string dateTime)
+    {
+        TimeCurrent = DateTime.Parse(dateTime);
+        AddTimeToCheck();
+    }
+    void SetDateTime(int year, int month, int day, int hour, int minute, int second)
+    {
+        TimeCurrent = new DateTime(year, month, day, hour, minute, second);
+        AddTimeToCheck();
+    }
+
+    void AddTimeToCheck()
+    {
+        TimeToCheck = TimeCurrent.AddHours(1);
+
+        print("Current time: " + TimeCurrent);
+        print("Next check: " + TimeToCheck);
+
+        TimeGetted = true;
+    }
+
+    public void OnSetAlarm(bool state)
+    {
+        Alarm.instance.ArrowsTime[0] = Hours;
+        Alarm.instance.ArrowsTime[1] = Minutes;
+        Alarm.instance.ArrowsTime[2] = Seconds;
+
+        if (state)
         {
-            yield return new WaitForSeconds(3600);
-            ActualTime();
+            canUpdateUI = false;
+            UIController.instance.InteractDigital(true);
         }
-        StartCoroutine(IE());
+        else
+        {
+            canUpdateUI = true;
+        }
     }
 }
 
