@@ -67,6 +67,18 @@ public class UIController : MonoBehaviour
         if (index == 0)
         {
             time = (int)(Mathf.Abs((int)(rot - 360)) / hoursToDegrees);
+
+            if (Alarm.instance.PM)
+            {
+                time = time + 12;
+
+                //if (time == 12)
+                //    time = 0;
+            }
+            else{
+                //if (time == 0)
+                //    time = 12;
+            }
         }
 
         if (index == 1)
